@@ -1,0 +1,101 @@
+library(edgeR)
+MS_result=read.table('MS_result.txt', sep='\t', header=TRUE, row.names=1)
+express_data=MS_result
+sample = read.table('C:/Users/gaoda/OneDrive - USTC/Gao lab/Scripts/metabolic/sample2.txt', sep='\t', header=FALSE, row.names=1)
+N = nrow(express_data)
+sample=as.data.frame(sample)
+colnames(sample) = c('class')
+group = factor(sample$class)
+
+y = DGEList(counts=express_data, genes=rownames(express_data), group=group)
+#y$samples$genotype = relevel(y$samples$genotype, ref="WT")
+#y$samples$sex = relevel(y$samples$sex, ref="male")
+y$samples$group = relevel(y$samples$group, ref="WT_male")
+y = calcNormFactors(y, method="TMM")
+#normList <- cpm(y, normalized.lib.sizes=TRUE)
+#plotMD(cpm(y, log=TRUE),column=7)
+#abline(h=0, col="red", lty=2, lwd=2)
+design = model.matrix(~0+group, data=y$samples)
+colnames(design) = levels(y$samples$group)
+y = estimateDisp(y, design)
+fit = glmFit(y, design)
+
+comparison = makeContrasts(LCK_cKI_male-WT_male, levels=design)									
+DEG_model = glmLRT(fit, contrast=comparison)
+
+DEG_output2 = topTags(DEG_model, n=N)
+write.table(DEG_output2, "groupLCK_cKI_male-groupWT_male.txt", sep="\t", quote=FALSE)		
+summary(de <- decideTestsDGE(DEG_model))
+
+png("figure_volcano_groupLCK_cKI_male-groupWT_male level.png", width=5, height=5, units='in', res=300)
+plot(DEG_output$table$logFC, -log10(DEG_output$table$PValue), main="groupLCK_cKI_male-groupWT_male", xlab="log2(FC)", ylab="-log10(pValue)", xlim=c(-10, 12), pch=16, cex=0.7)
+with(subset(DEG_output$table, logFC >= 1 & PValue < 0.05 & FDR < 0.05), points(logFC, -log10(PValue), pch=16, cex=0.7, col="red"))
+with(subset(DEG_output$table, logFC <= -1 & PValue < 0.05 & FDR < 0.05), points(logFC, -log10(PValue), pch=16, cex=0.7, col="blue"))
+dev.off()
+
+
+
+
+group = factor(sample$class)
+y = DGEList(counts=express_data, genes=rownames(express_data), group=group)
+y$samples$group = relevel(y$samples$group, ref="WT_female")
+y = calcNormFactors(y, method="TMM")
+design = model.matrix(~0+group, data=y$samples)
+colnames(design) = levels(y$samples$group)
+y = estimateDisp(y, design)
+fit = glmFit(y, design)
+comparison = makeContrasts(WT_female-LCK_cKI_female , levels=design)									
+DEG_model = glmLRT(fit, contrast=comparison)
+
+DEG_output = topTags(DEG_model, n=N)
+write.table(DEG_output, "groupLCK_cKI_female -groupWT_female.txt", sep="\t", quote=FALSE)		
+summary(de <- decideTestsDGE(DEG_model))
+
+png("figure_volcano_ggroupLCK_cKI_female -groupWT_female level.png", width=5, height=5, units='in', res=300)
+plot(DEG_output$table$logFC, -log10(DEG_output$table$PValue), main="groupLCK_cKI_female -groupWT_female", xlab="log2(FC)", ylab="-log10(pValue)", xlim=c(-10, 12), pch=16, cex=0.7)
+with(subset(DEG_output$table, logFC >= 1 & PValue < 0.05 & FDR < 0.05), points(logFC, -log10(PValue), pch=16, cex=0.7, col="red"))
+with(subset(DEG_output$table, logFC <= -1 & PValue < 0.05 & FDR < 0.05), points(logFC, -log10(PValue), pch=16, cex=0.7, col="blue"))
+dev.off()
+merged_output=merge(DEG_output,DEG_output2,by="row.names")
+write.table(merged_output, "merged_output.txt", sep="\t", quote=FALSE)
+#######################################################################################################################################
+sample3 = read.table('C:/Users/gaoda/OneDrive - USTC/Gao lab/Scripts/metabolic/sample3.txt', sep='\t', header=FALSE, row.names=1)
+colnames(sample3) = c('genotype',"sex")
+
+sample3$genotype=factor(sample3$genotype)
+sample3$sex=factor(sample3$sex)
+y = DGEList(counts=express_data, genes=rownames(express_data), samples = sample3)
+design <- model.matrix(~ 0+genotype + sex, data = y$samples)
+y$samples$genotype = relevel(y$samples$genotype, ref="WT")
+y$samples$sex = relevel(y$samples$sex, ref="male")
+y = calcNormFactors(y, method="TMM")
+y = estimateDisp(y, design)
+fit = glmFit(y, design)
+comparison = makeContrasts(genotypeLCK_cKI-genotypeWT, levels=design)									
+DEG_model = glmLRT(fit, contrast=comparison)
+
+DEG_output2 = topTags(DEG_model, n=N)
+write.table(DEG_output2, "groupLCK_cKI-groupWT new method.txt", sep="\t", quote=FALSE)		
+summary(de <- decideTestsDGE(DEG_model))
+########################################################################################
+sample3[7,]=sample3[8,]
+sample3=sample3[1:7,]
+colnames(sample3) = c('genotype',"sex")
+express_data[[7]]=NULL
+sample3$genotype=factor(sample3$genotype)
+sample3$sex=factor(sample3$sex)
+y = DGEList(counts=express_data, genes=rownames(express_data), samples = sample3)
+
+design <- model.matrix(~ 0+genotype + sex, data = y$samples)
+y$samples$genotype = relevel(y$samples$genotype, ref="WT")
+y$samples$sex = relevel(y$samples$sex, ref="male")
+y = calcNormFactors(y, method="TMM")
+y = estimateDisp(y, design)
+fit = glmFit(y, design)
+comparison = makeContrasts(genotypeLCK_cKI-genotypeWT, levels=design)									
+DEG_model = glmLRT(fit, contrast=comparison)
+
+DEG_output2 = topTags(DEG_model, n=N)
+write.table(DEG_output2, "groupLCK_cKI-groupWT new method remove7.txt", sep="\t", quote=FALSE)		
+summary(de <- decideTestsDGE(DEG_model))
+
